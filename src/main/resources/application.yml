@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:h2:tcp://localhost/~/querydsl # H2 데이터베이스 URL (TCP 모드)
+    username: sa # 사용자 이름
+    password: # 비밀번호
+    driver-class-name: org.h2.Driver # H2 드라이버 클래스
+
+  jpa:
+    hibernate:
+      ddl-auto: create # 애플리케이션 실행 시점에 DDL(테이블 등)을 새로 생성 (주의: 데이터 손실 가능)
+    properties:
+      hibernate:
+        # show_sql: true # 이 설정은 콘솔에 바로 SQL을 남김 (logging.level 방식이 더 유연)
+        format_sql: true # SQL 쿼리를 읽기 쉽게 포맷팅하여 로그에 남김
+        # use_sql_comments: true # (선택 사항) 쿼리에 주석을 포함시킬지 여부
+
+logging: # 로깅 레벨 설정
+  level:
+    org.hibernate.SQL: debug # Hibernate가 생성하는 SQL 쿼리를 DEBUG 레벨로 로그에 남김
+#    org.hibernate.type: trace # (선택 사항) SQL 쿼리에 바인딩되는 파라미터 값까지 TRACE 레벨로 로그에 남김

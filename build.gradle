@@ -42,6 +42,11 @@ dependencies {
     annotationProcessor "jakarta.annotation:jakarta.annotation-api" // 필요
     annotationProcessor "jakarta.persistence:jakarta.persistence-api" // 필요
 
+    // P6Spy Spring Boot Starter 추가
+    // 이 스타터를 추가하면 P6Spy 라이브러리와 자동 설정 기능이 포함됩니다.
+    implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.1' // 최신 버전 확인 권장
+
+
 }
 
 tasks.named('test') {
