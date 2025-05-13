@@ -166,7 +166,6 @@ public class QuerydslBasicTest {
    * */
   @Test
   public void group() {
-    // given
     List<Tuple> result = queryFactory.select(team.name, member.age.avg()).from(member).join(member.team, team)
                                      .groupBy(team.name).fetch();
     Tuple teamA = result.get(0);
@@ -177,10 +176,30 @@ public class QuerydslBasicTest {
 
     assertThat(teamB.get(team.name)).isEqualTo("teamB");
     assertThat(teamB.get(member.age.avg())).isEqualTo(35);
-    // when
 
-    // then
+  }
 
+  // teamA에 소소된 모든 회원
+  @Test
+  public void join() {
+    List<Member> result1 = queryFactory.selectFrom(member).join(member.team, team).fetchJoin()
+                                       .where(team.name.eq("teamA")).fetch();
+    List<Member> result2 = queryFactory.selectFrom(member).join(member.team, team).where(team.name.eq("teamA")).fetch();
+    System.out.println("result1 = " + result1);
+    System.out.println("result2 = " + result2);
+
+    assertThat(result2).hasSize(2);
+    assertThat(result2).extracting("username").containsExactly("member1", "member2");
+  }
+
+  // 회원의 이름이 팀 이름과 같은 회원 조회
+  @Test
+  public void theta_join() {
+    em.persist(new Member("teamA", 100));
+    em.persist(new Member("teamB", 100));
+
+    List<Member> result = queryFactory.select(member).from(member, team).where(member.username.eq(team.name)).fetch();
+    assertThat(result).extracting("username").containsExactly("teamA", "teamB");
   }
 
 
