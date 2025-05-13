@@ -1,7 +1,10 @@
 package study.querydsl;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static study.querydsl.entity.QMember.member;
+import static study.querydsl.entity.QTeam.team;
 
+import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.Wildcard;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -69,7 +72,7 @@ public class QuerydslBasicTest {
   public void search() {
     Member findMember = queryFactory.selectFrom(member).where(member.username.eq("member1").and(member.age.eq(10)))
                                     .fetchOne();
-    org.assertj.core.api.Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
+    assertThat(findMember.getUsername()).isEqualTo("member1");
   }
 
   // where 안에 여러 조건을 넣을 수 있다. ==> .and()로 체이닝하지 않아도 됨.
@@ -77,7 +80,7 @@ public class QuerydslBasicTest {
   public void searchAndParam() {
     Member findMember = queryFactory.selectFrom(member).where(member.username.eq("member1"), (member.age.eq(10)))
                                     .fetchOne();
-    org.assertj.core.api.Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
+    assertThat(findMember.getUsername()).isEqualTo("member1");
   }
 
   @Test
@@ -133,9 +136,50 @@ public class QuerydslBasicTest {
     Member member5 = result.get(0);
     Member member6 = result.get(1);
     Member memberNull = result.get(2);
-    org.assertj.core.api.Assertions.assertThat(member5.getUsername()).isEqualTo("member5");
-    org.assertj.core.api.Assertions.assertThat(member6.getUsername()).isEqualTo("member6");
-    org.assertj.core.api.Assertions.assertThat(memberNull.getUsername()).isNull();
+    assertThat(member5.getUsername()).isEqualTo("member5");
+    assertThat(member6.getUsername()).isEqualTo("member6");
+    assertThat(memberNull.getUsername()).isNull();
+
+  }
+
+  @Test
+  public void paging1() {
+    List<Member> result = queryFactory.selectFrom(member).orderBy(member.username.desc()).offset(1).limit(2).fetch();
+    assertThat(result).hasSize(2);
+  }
+
+  @Test
+  public void aggregation() {
+    Tuple result = queryFactory.select(
+        member.count(), member.age.sum(), member.age.avg(), member.age.max(), member.age.min()).from(member).fetchOne();
+
+    assertThat(result.get(member.count())).isEqualTo(4L);
+    assertThat(result.get(member.age.sum())).isEqualTo(100);
+    assertThat(result.get(member.age.avg())).isEqualTo(25);
+    assertThat(result.get(member.age.max())).isEqualTo(40);
+    assertThat(result.get(member.age.min())).isEqualTo(10);
+
+  }
+
+  /*
+   *  팀의 이르뫄 각 팀의 평균 연령을 구해라.
+   * */
+  @Test
+  public void group() {
+    // given
+    List<Tuple> result = queryFactory.select(team.name, member.age.avg()).from(member).join(member.team, team)
+                                     .groupBy(team.name).fetch();
+    Tuple teamA = result.get(0);
+    Tuple teamB = result.get(1);
+
+    assertThat(teamA.get(team.name)).isEqualTo("teamA");
+    assertThat(teamA.get(member.age.avg())).isEqualTo(15);
+
+    assertThat(teamB.get(team.name)).isEqualTo("teamB");
+    assertThat(teamB.get(member.age.avg())).isEqualTo(35);
+    // when
+
+    // then
 
   }
 
