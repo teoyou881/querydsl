@@ -2,8 +2,10 @@ package study.querydsl;
 
 import static study.querydsl.entity.QMember.member;
 
+import com.querydsl.core.types.dsl.Wildcard;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
+import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -76,5 +78,38 @@ public class QuerydslBasicTest {
     Member findMember = queryFactory.selectFrom(member).where(member.username.eq("member1"), (member.age.eq(10)))
                                     .fetchOne();
     org.assertj.core.api.Assertions.assertThat(findMember.getUsername()).isEqualTo("member1");
+  }
+
+  @Test
+  public void result() {
+    // List
+    List<Member> fetch = queryFactory.selectFrom(member).fetch();
+
+    // 단 건
+    Member findMember1 = queryFactory.selectFrom(member).where(member.username.eq("member2")).fetchOne();
+
+    // 처음 한 건 조회
+    Member findMember2 = queryFactory.selectFrom(member).fetchFirst();
+
+    /*
+    deprecated.....
+    페이징 쿼리를 따로 날려야 한다.
+
+    // 페이징에서 사용
+    QueryResults<Member> results = queryFactory.selectFrom(member).fetchResults();
+
+    // count 쿼리로 변경
+    long count = queryFactory.selectFrom(member).fetchCount();
+    */
+
+    // 1. springdatajpa를 이용하는 방법.
+    // Spring Data JPA Repository에서 Pageable 사용
+
+    // 2. count() 사용하기.
+    Long totalCount1 = queryFactory.select(member.count()).from(member).fetchOne();
+    System.out.println("totalCount = " + totalCount1);
+    Long totalCount2 = queryFactory.select(Wildcard.count).from(member).fetchOne();
+    System.out.println("totalCount2 = " + totalCount2);
+
   }
 }
