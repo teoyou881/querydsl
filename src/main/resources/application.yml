@@ -12,7 +12,7 @@ spring:
       hibernate:
         # show_sql: true # 이 설정은 콘솔에 바로 SQL을 남김 (logging.level 방식이 더 유연)
         format_sql: true # SQL 쿼리를 읽기 쉽게 포맷팅하여 로그에 남김
-        # use_sql_comments: true # (선택 사항) 쿼리에 주석을 포함시킬지 여부
+        use_sql_comments: true # (선택 사항) 쿼리에 주석을 포함시킬지 여부
 
 logging: # 로깅 레벨 설정
   level:
