@@ -1,11 +1,14 @@
 package study.querydsl;
 
+import static com.querydsl.jpa.JPAExpressions.select;
 import static org.assertj.core.api.Assertions.assertThat;
 import static study.querydsl.entity.QMember.member;
 import static study.querydsl.entity.QTeam.team;
 
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.Wildcard;
+import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
@@ -18,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 import study.querydsl.entity.Member;
+import study.querydsl.entity.QMember;
 import study.querydsl.entity.Team;
 
 @SpringBootTest
@@ -35,7 +39,7 @@ public class QuerydslBasicTest {
 
   @BeforeEach
   public void before() {
-    queryFactory = new JPAQueryFactory(em);
+    // queryFactory = new JPAQueryFactory(em);
 
     Team teamA = new Team("teamA");
     Team teamB = new Team("teamB");
@@ -264,4 +268,89 @@ public class QuerydslBasicTest {
     assertThat(loaded).isTrue();
 
   }
+
+  // 나이가 가장 많은 회원 조회
+  /*
+  * JPQL/SQL의 별칭(Alias): JPQL이나 SQL에서는 쿼리 내에서 테이블이나 엔티티를 참조할 때 별칭을 사용합니다 (예: SELECT m FROM Member m). 이 별칭은 쿼리 전체 또는 특정 스코프 내에서 해당 테이블/엔티티의 특정 인스턴스를 지칭하는 데 사용됩니다.
+서브쿼리의 독립적인 스코프: 서브쿼리는 메인 쿼리와는 별개의 독립적인 쿼리 스코프(범위)를 가집니다. 서브쿼리 내에서 참조하는 엔티티는 서브쿼리 자체의 스코프 내에서 유효한 별칭을 가집니다.
+동일 엔티티를 다른 스코프에서 참조: 이 예시처럼 메인 쿼리도 Member 엔티티를 조회하고, 서브쿼리도 Member 엔티티의 최대 나이를 찾기 위해 Member 엔티티를 다시 참조합니다. 만약 서브쿼리 내에서도 메인 쿼리와 동일한 별칭(member)을 사용한다면, JPQL/SQL 파서가 서브쿼리 내의 member가 메인 쿼리의 member를 의미하는지, 아니면 서브쿼리 내의 Member 엔티티 자체를 의미하는지 혼동할 수 있습니다.
+Querydsl Q-타입은 별칭을 나타냄: Querydsl에서 QMember member = QMember.member; 또는 QMember memberSub = new QMember("memberSub"); 와 같이 생성하는 Q-타입 인스턴스는 JPQL/SQL 쿼리에서 사용될 해당 엔티티의 별칭을 표현합니다.
+따라서 서브쿼리 내에서 Member 엔티티를 참조할 때는, 메인 쿼리에서 사용된 별칭(member)과 구분하기 위해 새로운 Q-타입 인스턴스(memberSub)를 생성하고 서브쿼리 내에서 사용될 별도의 별칭("memberSub")을 지정해 주어야 합니다. 이는 서브쿼리의 스코프 내에서 Member 엔티티의 해당 사용을 명확하게 식별할 수 있도록 해줍니다.
+  * */
+  @Test
+  public void subQuery() {
+    QMember memberSub = new QMember("memberSub");
+    List<Member> result = queryFactory.selectFrom(member)
+                                      .where(member.age.eq(select(memberSub.age.max()).from(memberSub))).fetch();
+    assertThat(result).hasSize(1);
+    assertThat(result).extracting("age").containsExactly(40);
+  }
+
+  // 나이가 평균 이상인 회원
+  @Test
+  public void subQueryGoe() {
+    QMember memberSub = new QMember("memberSub");
+    List<Member> result = queryFactory.selectFrom(member)
+                                      .where(member.age.goe(select(memberSub.age.avg()).from(memberSub))).fetch();
+    assertThat(result).hasSize(2);
+    assertThat(result).extracting("age").containsExactly(30, 40);
+  }
+
+  // where 절에 in
+  @Test
+  public void subQueryIn() {
+    QMember memberSub = new QMember("memberSub");
+    List<Member> result = queryFactory.selectFrom(member).where(
+        member.age.in(select(memberSub.age).from(memberSub).where(memberSub.age.gt(10)))).fetch();
+    assertThat(result).hasSize(3);
+    assertThat(result).extracting("age").containsExactly(20, 30, 40);
+  }
+
+  // select 절 안에 select
+  @Test
+  public void selectSubQuery() {
+    QMember memberSub = new QMember("memberSub");
+    List<Tuple> result = queryFactory.select(member.username, select(memberSub.age.avg()).from(memberSub)).from(member)
+                                     .fetch();
+    for (Tuple tuple : result) {
+      System.out.println("tuple = " + tuple);
+    }
+  }
+
+  /**
+   * JPQL does not support subqueries in the FROM clause.
+   * This test demonstrates that limitation and is expected to fail.
+   *
+   * Querydsl follows JPQL specification, so it also doesn't support subqueries in FROM.
+   * Alternative approaches:
+   * 1. Use join operations
+   * 2. Execute the subquery first, then use the results in a second query
+   * 3. Use native SQL if subqueries in FROM are absolutely necessary
+   */
+  @Test
+  public void fromSubQuery() {
+    // This code will not compile because JPQL doesn't support subqueries in FROM clause
+    QMember memberSub = new QMember("memberSub");
+    JPQLQuery<Member> sub = JPAExpressions.selectFrom(memberSub).where(memberSub.age.gt(20));
+    // The following line causes a compilation error:
+    // queryFactory.select(memberSub).from(sub).fetch();
+
+    // Instead, we could use a regular query with a where clause:
+    List<Member> result = queryFactory.selectFrom(member).where(member.age.gt(20)).fetch();
+    assertThat(result).extracting("age").containsExactly(30, 40);
+  }
+
+  // blaze persistence 가 javax의 entityManavaer를 요규한다.;;;;
+  // @Test
+  // public void fromSubQueryBlaze() {
+  //   // This code will not compile because JPQL doesn't support subqueries in FROM clause
+  //   QMember memberSub = new QMember("memberSub");
+  //   JPQLQuery<Member> sub = JPAExpressions.selectFrom(memberSub).where(memberSub.age.gt(20));
+  //   // The following line causes a compilation error:
+  //   // queryFactory.select(memberSub).from(sub).fetch();
+  //
+  //   // Instead, we could use a regular query with a where clause:
+  //   List<Member> result = queryFactory.select(member).from(sub).fetch();
+  //   assertThat(result).extracting("age").containsExactly(30, 40);
+  // }
 }
