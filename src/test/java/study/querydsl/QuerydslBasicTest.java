@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static study.querydsl.entity.QMember.member;
 import static study.querydsl.entity.QTeam.team;
 
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Projections;
@@ -485,5 +486,25 @@ Querydsl Q-타입은 별칭을 나타냄: Querydsl에서 QMember member = QMembe
     for (MemberDto memberDto : result) {
       System.out.println("memberDto = " + memberDto);
     }
+  }
+
+  @Test
+  public void dynamicQuery_BooleanBuilder() {
+    String usernameParam = "member1";
+    Integer ageParam = null;
+
+    List<Member> result = searchMember1(usernameParam, ageParam);
+  }
+
+  private List<Member> searchMember1(String usernameCond, Integer ageCond) {
+    BooleanBuilder builder = new BooleanBuilder();
+    if (usernameCond != null) {
+      builder.and(member.username.eq(usernameCond));
+    }
+    if (ageCond != null) {
+      builder.and(member.age.eq(ageCond));
+    }
+
+    return queryFactory.selectFrom(member).where(builder).fetch();
   }
 }
