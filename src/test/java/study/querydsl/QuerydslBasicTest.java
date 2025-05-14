@@ -6,6 +6,7 @@ import static study.querydsl.entity.QMember.member;
 import static study.querydsl.entity.QTeam.team;
 
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Wildcard;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.JPQLQuery;
@@ -39,7 +40,7 @@ public class QuerydslBasicTest {
 
   @BeforeEach
   public void before() {
-    // queryFactory = new JPAQueryFactory(em);
+    queryFactory = new JPAQueryFactory(em);
 
     Team teamA = new Team("teamA");
     Team teamB = new Team("teamB");
@@ -353,4 +354,24 @@ Querydsl Q-타입은 별칭을 나타냄: Querydsl에서 QMember member = QMembe
   //   List<Member> result = queryFactory.select(member).from(sub).fetch();
   //   assertThat(result).extracting("age").containsExactly(30, 40);
   // }
+
+
+  @Test
+  public void basicCase() {
+    List<String> result = queryFactory.select(member.age.when(10).then("age10").when(20).then("age20").otherwise("ect"))
+                                      .from(member).fetch();
+    for (String s : result) {
+      System.out.println("s = " + s);
+    }
+  }
+
+  @Test
+  public void complexCase() {
+    List<String> result = queryFactory.select(
+        new CaseBuilder().when(member.age.between(0, 20)).then("0~20").when(member.age.between(21, 40)).then("20~40")
+                         .otherwise("ect")).from(member).fetch();
+    for (String s : result) {
+      System.out.println("s = " + s);
+    }
+  }
 }
