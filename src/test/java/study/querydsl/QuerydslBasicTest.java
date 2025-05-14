@@ -6,6 +6,8 @@ import static study.querydsl.entity.QMember.member;
 import static study.querydsl.entity.QTeam.team;
 
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.Wildcard;
@@ -22,6 +24,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import study.querydsl.dto.MemberDto;
+import study.querydsl.dto.UserDto;
 import study.querydsl.entity.Member;
 import study.querydsl.entity.QMember;
 import study.querydsl.entity.Team;
@@ -411,6 +415,63 @@ Querydsl Q-타입은 별칭을 나타냄: Querydsl에서 QMember member = QMembe
     for (Tuple s : result) {
       System.out.println(s.get(member.username));
       System.out.println(s.get(member.age));
+    }
+  }
+
+  @Test
+  public void findDtoByJPQL() {
+    List<MemberDto> result = em.createQuery(
+        "select new study.querydsl.dto.MemberDto(m.username, m.age) from Member m", MemberDto.class).getResultList();
+    for (MemberDto memberDto : result) {
+      System.out.println("memberDto = " + memberDto);
+    }
+  }
+
+  // Projections.bean --> setter를 사용한다.
+  // 따라서 setter를 허용해줘야 한다.
+  @Test
+  public void findDtoBySetter() {
+    List<MemberDto> result = queryFactory.select(Projections.bean(MemberDto.class, member.username, member.age))
+                                         .from(member).fetch();
+  }
+
+  @Test
+  public void findDtoByField() {
+    List<MemberDto> result = queryFactory.select(Projections.fields(MemberDto.class, member.username, member.age))
+                                         .from(member).fetch();
+  }
+
+  // 생성자 타입에서는 타입 순서를 맞춰줘야 한다.
+  @Test
+  public void findDtoByConstructor() {
+    List<MemberDto> result = queryFactory.select(Projections.constructor(MemberDto.class, member.username, member.age))
+                                         .from(member).fetch();
+  }
+
+  // 별칭이 다를 때는, .as() 를 사용해줘야 한다. 아니면 null 로 뜸.
+  @Test
+  public void findUserDtoAlias() {
+    List<UserDto> result = queryFactory.select(
+        Projections.fields(UserDto.class, member.username.as("name"), member.age)).from(member).fetch();
+    for (UserDto userDto : result) {
+      System.out.println("userDto = " + userDto);
+    }
+
+    List<UserDto> resultNoAs = queryFactory.select(Projections.fields(UserDto.class, member.username, member.age))
+                                           .from(member).fetch();
+    for (UserDto userDto : resultNoAs) {
+      System.out.println("userDto = " + userDto);
+    }
+
+    QMember memberSub = new QMember("memberSub");
+
+    // Projections.fields()를 사용할 때, 서브쿼리 결과를 DTO에 매핑하려면 별칭(alias)을 지정해야 한다.
+    // ExpressionUtils.as(subquery, "alias")를 사용해 DTO의 필드명과 일치하는 별칭을 부여해야 한다.
+    List<UserDto> age = queryFactory.select(Projections.fields(
+        UserDto.class, member.username, ExpressionUtils.as(
+            select(memberSub.age.max()).from(memberSub), "age"))).from(member).fetch();
+    for (UserDto userDto : resultNoAs) {
+      System.out.println("userDto = " + userDto);
     }
   }
 }
