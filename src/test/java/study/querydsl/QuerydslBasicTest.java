@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 import study.querydsl.dto.MemberDto;
+import study.querydsl.dto.QMemberDto;
 import study.querydsl.dto.UserDto;
 import study.querydsl.entity.Member;
 import study.querydsl.entity.QMember;
@@ -472,6 +473,17 @@ Querydsl Q-타입은 별칭을 나타냄: Querydsl에서 QMember member = QMembe
             select(memberSub.age.max()).from(memberSub), "age"))).from(member).fetch();
     for (UserDto userDto : resultNoAs) {
       System.out.println("userDto = " + userDto);
+    }
+  }
+
+  // findDtoByConstructor 와의 차이점
+  // 생성자에서 정해놓은 타입이 아니거나, 파라미터 개수가 다르면 컴파일 에러가 발생.
+  @Test
+  public void findDtoByQueryProjection() {
+    List<MemberDto> result = queryFactory.select(new QMemberDto(member.username, member.age)).from(member).fetch();
+
+    for (MemberDto memberDto : result) {
+      System.out.println("memberDto = " + memberDto);
     }
   }
 }
