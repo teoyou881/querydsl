@@ -203,4 +203,38 @@ public class QuerydslBasicTest {
   }
 
 
+  // On
+  // 1. 조인 대상 필터링
+  @Test
+  public void join_on_filtering() {
+    // leftJoin + on
+    List<Tuple> result = queryFactory.select(member, team).from(member).leftJoin(member.team, team)
+                                     .on(team.name.eq("teamA")).fetch();
+    for (Tuple tuple : result) {
+      System.out.println("tuple = " + tuple);
+    }
+
+    // innerJoin + where
+    List<Tuple> result1 = queryFactory.select(member, team).from(member).join(member.team, team)
+                                      .where(team.name.eq("teamA")).fetch();
+    for (Tuple fetch1 : result1) {
+      System.out.println("fetch1 = " + fetch1);
+    }
+  }
+
+  // On
+  // 2. 연관관계 없는 엔티티 외부 조인
+  // leftJoin에 있는 team이 타겟 엔티티, alias 로 사용된다.
+  // 이럴 때는 연관관계(보통 id 또는 외래 키로 조인)를 사용하지 않는다.
+  // 대신 on절에 명시된 임의의 조건을 사용해서 조인을 수행한다.
+  @Test
+  public void join_on_no_relation() throws Exception {
+    em.persist(new Member("teamA"));
+    em.persist(new Member("teamB"));
+    List<Tuple> result = queryFactory.select(member, team).from(member).leftJoin(team).on(member.username.eq(team.name))
+                                     .fetch();
+    for (Tuple tuple : result) {
+      System.out.println("t=" + tuple);
+    }
+  }
 }
