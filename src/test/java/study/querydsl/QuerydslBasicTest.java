@@ -8,6 +8,8 @@ import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.Wildcard;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.PersistenceUnit;
 import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +30,8 @@ public class QuerydslBasicTest {
   // 멀티쓰레드 safe
   // 트랜잭션에 따라서 알아서 잘 돌아간다.
   JPAQueryFactory queryFactory;
+  @PersistenceUnit
+  EntityManagerFactory emf;
 
   @BeforeEach
   public void before() {
@@ -83,6 +87,14 @@ public class QuerydslBasicTest {
     assertThat(findMember.getUsername()).isEqualTo("member1");
   }
 
+
+  /*
+  회원 정렬 순서
+  1. 회원 나이 내림차순
+  2. 최원 이름 올림차순
+  * 단 2에서 회원 이름이 없으면 마지막에 출력(nulls last)
+   */
+
   @Test
   public void result() {
     // List
@@ -115,14 +127,6 @@ public class QuerydslBasicTest {
     System.out.println("totalCount2 = " + totalCount2);
 
   }
-
-
-  /*
-  회원 정렬 순서
-  1. 회원 나이 내림차순
-  2. 최원 이름 올림차순
-  * 단 2에서 회원 이름이 없으면 마지막에 출력(nulls last)
-   */
 
   @Test
   public void sort() {
@@ -202,7 +206,6 @@ public class QuerydslBasicTest {
     assertThat(result).extracting("username").containsExactly("teamA", "teamB");
   }
 
-
   // On
   // 1. 조인 대상 필터링
   @Test
@@ -236,5 +239,29 @@ public class QuerydslBasicTest {
     for (Tuple tuple : result) {
       System.out.println("t=" + tuple);
     }
+  }
+
+  @Test
+  public void fetchJoinNo() {
+    em.flush();
+    em.clear();
+
+    Member findMember = queryFactory.selectFrom(member).join(member.team, team).where(member.username.eq("member1"))
+                                    .fetchOne();
+    boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+    assertThat(loaded).isFalse();
+
+  }
+
+  @Test
+  public void fetchJoinUse() {
+    em.flush();
+    em.clear();
+
+    Member findMember = queryFactory.selectFrom(member).join(member.team, team).fetchJoin()
+                                    .where(member.username.eq("member1")).fetchOne();
+    boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+    assertThat(loaded).isTrue();
+
   }
 }
