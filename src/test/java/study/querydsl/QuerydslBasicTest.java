@@ -393,4 +393,24 @@ Querydsl Q-타입은 별칭을 나타냄: Querydsl에서 QMember member = QMembe
       System.out.println("s = " + s);
     }
   }
+
+  @Test
+  public void simpleProjection() {
+    List<String> result = queryFactory.select(member.username).from(member).fetch();
+    for (String s : result) {
+      System.out.println("s = " + s);
+    }
+  }
+
+  // tuple의 패키지 --> package com.querydsl.core;
+  // 튜플을 리포지토리 계층 안에서 사용하는건 괜찮지만, 서비스나 컨트롤러 계층으로 넘어가는건 좋은 설계가 아니다.
+  // 어떤 구현기술을 사용하는지, 서비스나 컨트롤러에서 알 필요 없고 알면 안 된다.
+  @Test
+  public void tupleProjection() {
+    List<Tuple> result = queryFactory.select(member.username, member.age).from(member).fetch();
+    for (Tuple s : result) {
+      System.out.println(s.get(member.username));
+      System.out.println(s.get(member.age));
+    }
+  }
 }
