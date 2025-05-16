@@ -557,4 +557,59 @@ BooleanExpression은 and(), or(), not() 등과 같은 메서드를 내장하고 
   private Predicate allEq(String usernameCond, Integer ageCond) {
     return usernameEq(usernameCond) != null ? member.username.eq(usernameCond) : null;
   }
+
+  // bulk 연산 주의할 점
+  // 영속성 컨텍스트에서 관리하고 있는 걸 벌크 연산 처리 하면, 데이터 정합성이 달라진다.
+  // 아무것도 없는 상태에서 벌크 연산을 하던가, 아니면 벌크 연산을 하고 영속성 컨텍스트를 깔끔하게 비우자.
+  @Test
+  public void bulkUpdate() {
+    // member1, member2 --> non-member
+    long count = queryFactory.update(member).set(member.username, "non-member").where(member.age.lt(28)).execute();
+
+    List<Member> beforeMember = queryFactory.selectFrom(member).fetch();
+    for (Member m : beforeMember) {
+      System.out.println("m = " + m);
+      // m = Member(id=1, username=member1, age=10)
+      // m = Member(id=2, username=member2, age=20)
+      // m = Member(id=3, username=member3, age=30)
+      // m = Member(id=4, username=member4, age=40)
+    }
+
+    em.flush();
+    em.clear();
+
+    org.assertj.core.api.Assertions.assertThat(count).isEqualTo(2);
+    List<Member> afterMember = queryFactory.selectFrom(member).fetch();
+    for (Member m : afterMember) {
+      System.out.println("m = " + m);
+      // m = Member(id=1, username=non-member, age=10)
+      // m = Member(id=2, username=non-member, age=20)
+      // m = Member(id=3, username=member3, age=30)
+      // m = Member(id=4, username=member4, age=40)
+    }
+  }
+
+  @Test
+  public void bulkAdd() {
+    long count = queryFactory.update(member).set(member.age, member.age.divide(2)).execute();
+    org.assertj.core.api.Assertions.assertThat(count).isEqualTo(4);
+    em.flush();
+    em.clear();
+    List<Member> result = queryFactory.selectFrom(member).fetch();
+    for (Member member1 : result) {
+      System.out.println("member1 = " + member1);
+    }
+  }
+
+  @Test
+  public void bulkDelete() {
+    long count = queryFactory.delete(member).where(member.age.gt(20)).execute();
+    org.assertj.core.api.Assertions.assertThat(count).isEqualTo(2);
+    em.flush();
+    em.clear();
+    List<Member> result = queryFactory.selectFrom(member).fetch();
+    for (Member member1 : result) {
+      System.out.println("member1 = " + member1);
+    }
+  }
 }
