@@ -8,7 +8,9 @@ import static study.querydsl.entity.QTeam.team;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.Wildcard;
@@ -506,5 +508,53 @@ Querydsl Q-타입은 별칭을 나타냄: Querydsl에서 QMember member = QMembe
     }
 
     return queryFactory.selectFrom(member).where(builder).fetch();
+  }
+
+  // where에 응답값이 null이면, where 조건이 무시된다.
+  /*. where() 절에서 null 조건 자동 무시 (Dynamic Query Building)
+Querydsl의 where() 메서드(또는 and(), or() 같은 조합 메서드)는 인자로 받은 Predicate 객체들이 null일 경우 해당 조건을 자동으로 무시하고 최종 SQL 쿼리를 생성합니다.
+
+여러분의 코드에서 usernameEq()나 ageEq() 같은 메서드가 조건이 없을 때 null을 반환하도록 되어 있습니다. searchMember2 메서드에서 이들을 where() 절에 직접 넣어주면:
+
+Java
+
+.where(usernameEq(usernameCond), ageEq(ageCond))
+usernameCond가 "member1"이고 ageCond가 null인 경우:
+usernameEq("member1")은 member.username.eq("member1")이라는 BooleanExpression을 반환합니다.
+ageEq(null)은 null을 반환합니다.
+결과적으로 where() 절은 where(member.username.eq("member1"), null)과 같아지고, Querydsl은 null 조건을 무시하여 최종 SQL에는 WHERE member.username = 'member1'만 포함됩니다.
+이러한 특성 덕분에, if 문을 사용하여 조건에 따라 where 절을 덕지덕지 붙이는 복잡한 로직 대신, 각 조건을 메서드로 분리하고 null 반환 여부로 동적인 쿼리를 훨씬 깔끔하게 구성할 수 있습니다.
+
+2. BooleanExpression의 풍부한 기능과 조합 가능성
+BooleanExpression은 Querydsl이 제공하는 조건 표현식을 나타내는 클래스로, Predicate 인터페이스를 구현합니다. Predicate는 단순히 참/거짓을 판별하는 기본적인 인터페이스이지만, BooleanExpression은 그 이상의 기능을 제공합니다.
+BooleanExpression은 and(), or(), not() 등과 같은 메서드를 내장하고 있어, 여러 조건들을 메서드 체이닝 방식으로 유연하게 조합할 수 있습니다. 예를 들어, usernameEq(cond).and(ageEq(cond)) 와 같이 조건을 연결하여 가독성을 높이고 복잡한 로직을 표현할 수 있습니다. (다만, 이 경우 null 체크는 개별적으로 해주어야 합니다.)
+각 조건을 BooleanExpression을 반환하는 메서드로 캡슐화하면, 해당 조건을 다른 쿼리에서도 재사용하기 쉬워져 코드의 모듈성과 재사용성이 크게 향상됩니다.
+결론적으로, BooleanExpression을 사용하면 where 절의 null 무시 특성을 활용하여 동적 쿼리를 매우 간결하고 유연하게 작성할 수 있으며, 코드의 가독성과 재사용성 또한 높일 수 있습니다.
+  * */
+  @Test
+  public void dynamicQuery_WhereParam() {
+    String usernameParam = "member1";
+    Integer ageParam = null;
+
+    List<Member> result = searchMember2(usernameParam, ageParam);
+  }
+
+  private List<Member> searchMember2(String usernameCond, Integer ageCond) {
+    return queryFactory.selectFrom(member).where(usernameEq(usernameCond), ageEq(ageCond))
+                       // .where(allEq(usernameCond, ageCond))
+                       .fetch();
+  }
+
+  // BooleanExpression 이 predicate를 impl
+  private BooleanExpression usernameEq(String usernameCond) {
+    return usernameCond != null ? member.username.eq(usernameCond) : null;
+  }
+
+  private BooleanExpression ageEq(Integer ageCond) {
+    return ageCond != null ? member.age.eq(ageCond) : null;
+  }
+
+  private Predicate allEq(String usernameCond, Integer ageCond) {
+    return usernameEq(usernameCond) != null ? member.username.eq(usernameCond) : null;
   }
 }
