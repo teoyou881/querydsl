@@ -127,17 +127,17 @@ WHERE 절에 아무런 조건이 붙지 않으므로, 데이터베이스는 Memb
     em.persist(member4);
 
     MemberSearchCondition condition = new MemberSearchCondition();
-    // condition.setAgeGoe(35);
-    // condition.setAgeLoe(40);
-    // condition.setTeamName("teamB");
+    condition.setAgeGoe(35);
+    condition.setAgeLoe(40);
+    condition.setTeamName("teamB");
 
-    List<MemberTeamDto> result = memberJpaRepository.searchByBuilder(condition);
+    List<MemberTeamDto> result = memberJpaRepository.searchWhere(condition);
     for (MemberTeamDto memberTeamDto : result) {
       System.out.println("memberTeamDto = " + memberTeamDto);
     }
-    assertThat(result).hasSize(4);
+    assertThat(result).hasSize(1);
 
     // 순서도 맞아야 됨.
-    assertThat(result).extracting("username").containsExactly("member1", "member2", "member3", "member4");
+    assertThat(result).extracting("username").containsExactly("member4");
   }
 }
