@@ -97,6 +97,9 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
     // Long count = queryFactory.select(count(member)).from(member).where(checkMemberDtoAll(condition)).fetchOne();
     JPAQuery<Long> countQuery = queryFactory.select(count(member)).from(member).where(checkMemberDtoAll(condition));
 
+    // 실행 방식
+    // result.size() < pageable.getPageSize() → 즉 현재 페이지의 결과 수가 페이지 크기보다 작으면, 마지막 페이지이므로 카운트 쿼리를 실행하지 않고 페이지를 바로 만듭니다.
+    // 그렇지 않으면 → 즉, 아직 뒤에 더 데이터가 있을 수 있다면 → countQuery::fetchOne 이 실행돼서 전체 개수를 계산합니다.
     return PageableExecutionUtils.getPage(result, pageable, countQuery::fetchOne);
 
     // return new PageImpl<>(result, pageable, count);
