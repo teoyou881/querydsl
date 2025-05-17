@@ -19,13 +19,32 @@ import study.querydsl.dto.MemberSearchCondition;
 import study.querydsl.dto.MemberTeamDto;
 import study.querydsl.dto.QMemberTeamDto;
 
+
 @RequiredArgsConstructor
 public class MemberRepositoryImpl implements MemberRepositoryCustom {
 
   private final JPAQueryFactory queryFactory;
 
+  // QuerydslRepositorySupport 사용 코드
+  // public class MemberRepositoryImpl extends QuerydslRepositorySupport implements MemberRepositoryCustom {
+  // public MemberRepositoryImpl() {
+  //   super(member.getClass());
+  // }
+
+
   @Override
   public List<MemberTeamDto> search(MemberSearchCondition condition) {
+
+    // QuerydslRepositorySupport 사용 코드
+    // List<MemberTeamDto> result = from(member).leftJoin(member.team, team)
+    //                                          .where(checkMemberDtoAll(condition))
+    //                                          .select(new QMemberTeamDto(
+    //                                              member.id.as("memberId"),
+    //                                              member.username,
+    //                                              member.age,
+    //                                              team.id.as("teamId"),
+    //                                              team.name.as("teamName")))
+    //                                          .fetch();
 
     return queryFactory.select(new QMemberTeamDto(
                            member.id.as("memberId"),
